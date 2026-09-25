@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import json, os, re, uuid
+import ipaddress, json, os, re, uuid
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -9,6 +9,8 @@ ROOT = Path(__file__).resolve().parents[1]
 PUBLIC = ROOT / 'app' / 'public'
 CONTENT = ROOT / 'content'
 EVIDENCE = ROOT / 'evidence'
+PROGRESS = EVIDENCE / 'progress.json'
+ALLOWED_NET = ipaddress.ip_network('192.168.56.0/24')
 HOST = os.getenv('CYBERQUEST_HOST', '127.0.0.1')
 PORT = int(os.getenv('CYBERQUEST_PORT', '8080'))
 OLLAMA_URL = os.getenv('OLLAMA_URL', 'http://127.0.0.1:11434')
@@ -55,6 +57,53 @@ def evidence_record(scenario, result):
     record = {'evidence_id': 'EV-' + uuid.uuid4().hex[:8].upper(), 'timestamp': now(), 'scenario_id': scenario['scenario_id'], 'scenario': scenario['title'], 'result': result, 'authorization_scope': 'isolated_lab'}
     (EVIDENCE / (record['evidence_id'] + '.json')).write_text(json.dumps(record, indent=2), encoding='utf-8')
     return record
+
+
+def read_progress():
+    if not PROGRESS.exists():
+        return {'completed_lessons': [], 'completed_comics': [], 'completed_scenarios': [], 'updated_at': None}
+    return json.loads(PROGRESS.read_text(encoding='utf-8'))
+
+
+def write_progress(value):
+    EVIDENCE.mkdir(exist_ok=True)
+    value['updated_at'] = now()
+    PROGRESS.write_text(json.dumps(value, indent=2), encoding='utf-8')
+    return value
+
+
+def import_wazuh_alert(alert):
+    if not isinstance(alert, dict):
+        return 400, {'error': 'alert_must_be_object'}
+    candidates = []
+    agent = alert.get('agent') or {}
+    data = alert.get('data') or {}
+    for value in (agent.get('ip'), data.get('srcip'), data.get('dstip')):
+        if value:
+            candidates.append(str(value))
+    if not candidates:
+        return 403, {'error': 'no_lab_ip_found'}
+    invalid = []
+    for value in candidates:
+        try:
+            address = ipaddress.ip_address(value)
+            if address not in ALLOWED_NET and not address.is_loopback:
+                invalid.append(value)
+        except ValueError:
+            invalid.append(value)
+    if invalid:
+        return 403, {'error': 'out_of_scope_ip', 'addresses': invalid}
+    safe = {
+        'id': alert.get('id'), 'timestamp': alert.get('timestamp'),
+        'rule': {k: (alert.get('rule') or {}).get(k) for k in ('id', 'level', 'description', 'groups')},
+        'agent': {k: (alert.get('agent') or {}).get(k) for k in ('id', 'name', 'ip')},
+        'location': alert.get('location'), 'syscheck': {'path': (alert.get('syscheck') or {}).get('path')},
+        'data': {k: (alert.get('data') or {}).get(k) for k in ('srcip', 'dstip', 'dstuser')}
+    }
+    record = {'evidence_id': 'EV-' + uuid.uuid4().hex[:8].upper(), 'timestamp': now(), 'kind': 'wazuh_alert', 'authorization_scope': 'isolated_lab', 'alert': safe, 'human_approval_required': True, 'automatic_action_taken': False}
+    EVIDENCE.mkdir(exist_ok=True)
+    (EVIDENCE / (record['evidence_id'] + '.json')).write_text(json.dumps(record, indent=2), encoding='utf-8')
+    return 200, record
 
 
 def run_scenario(scenario_id, body):
@@ -117,8 +166,10 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/api/comics': return self.send_json(200, {'comics': load_comics()})
         if path == '/api/scenarios': return self.send_json(200, {'scenarios': load_json_dir(CONTENT/'scenarios')})
         if path == '/api/evidence':
-            records = [json.loads(p.read_text()) for p in sorted(EVIDENCE.glob('*.json'))]
+            records = [json.loads(p.read_text()) for p in sorted(EVIDENCE.glob('*.json')) if p.name != 'progress.json']
             return self.send_json(200, {'evidence': records})
+        if path == '/api/progress':
+            return self.send_json(200, read_progress())
         if path.startswith('/api/'):
             return self.send_json(404, {'error':'not_found'})
         file_path = PUBLIC / ('index.html' if path == '/' else path.lstrip('/'))
@@ -130,6 +181,16 @@ class Handler(BaseHTTPRequestHandler):
         try: body = json.loads(self.rfile.read(int(self.headers.get('Content-Length','0')) or 0) or b'{}')
         except Exception: return self.send_json(400, {'error':'invalid_json'})
         if path == '/api/mentor': return self.send_json(200, mentor_answer(body.get('question','')))
+        if path == '/api/evidence/import':
+            status, result = import_wazuh_alert(body)
+            return self.send_json(status, result)
+        if path == '/api/progress':
+            progress = read_progress()
+            for key in ('completed_lessons', 'completed_comics', 'completed_scenarios'):
+                values = body.get(key)
+                if isinstance(values, list):
+                    progress[key] = sorted(set(str(x) for x in values))
+            return self.send_json(200, write_progress(progress))
         match = re.fullmatch(r'/api/scenarios/([^/]+)/run', path)
         if match:
             scenario, result = run_scenario(match.group(1), body)

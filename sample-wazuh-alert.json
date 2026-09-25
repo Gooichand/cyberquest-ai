@@ -1,0 +1,20 @@
+{
+  "id": "synthetic-001",
+  "timestamp": "2026-09-25T12:00:00Z",
+  "rule": {
+    "id": "5710",
+    "level": 5,
+    "description": "Multiple failed SSH authentication attempts",
+    "groups": ["authentication_failed"]
+  },
+  "agent": {
+    "id": "002",
+    "name": "Ubuntu-Server",
+    "ip": "192.168.56.103"
+  },
+  "location": "journald",
+  "data": {
+    "srcip": "192.168.56.10",
+    "dstuser": "training-user"
+  }
+}

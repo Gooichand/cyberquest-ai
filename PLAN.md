@@ -16,14 +16,14 @@
 - [x] Build scenario lab
 - [x] Build Nova mentor
 - [x] Build evidence center
-- [ ] Add optional real Wazuh evidence adapter
-- [ ] Add instructor progress storage
+- [x] Add sanitized Wazuh evidence adapter endpoint
+- [x] Add local progress storage
 
 ## Week 3 — Verification and showcase
 
 - [x] Add safety-gate tests
 - [x] Add API tests
-- [ ] Connect the existing Wazuh-to-RAG receiver after manual testing
+- [ ] Connect the existing Wazuh-to-RAG receiver after manual testing (requires the user's live Wazuh VM)
 - [ ] Capture screenshots and demonstration video
 - [ ] Add final technical report and school-friendly user guide
 - [ ] Run browser and accessibility review
