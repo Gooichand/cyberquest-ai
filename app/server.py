@@ -54,7 +54,7 @@ def now():
 
 def evidence_record(scenario, result):
     EVIDENCE.mkdir(exist_ok=True)
-    record = {'evidence_id': 'EV-' + uuid.uuid4().hex[:8].upper(), 'timestamp': now(), 'scenario_id': scenario['scenario_id'], 'scenario': scenario['title'], 'result': result, 'authorization_scope': 'isolated_lab'}
+    record = {'evidence_id': 'EV-' + uuid.uuid4().hex[:8].upper(), 'timestamp': now(), 'scenario_id': scenario['scenario_id'], 'scenario': scenario['title'], 'result': result, 'authorization_scope': 'isolated_lab', 'review_status': 'pending'}
     (EVIDENCE / (record['evidence_id'] + '.json')).write_text(json.dumps(record, indent=2), encoding='utf-8')
     return record
 
@@ -100,7 +100,7 @@ def import_wazuh_alert(alert):
         'location': alert.get('location'), 'syscheck': {'path': (alert.get('syscheck') or {}).get('path')},
         'data': {k: (alert.get('data') or {}).get(k) for k in ('srcip', 'dstip', 'dstuser')}
     }
-    record = {'evidence_id': 'EV-' + uuid.uuid4().hex[:8].upper(), 'timestamp': now(), 'kind': 'wazuh_alert', 'authorization_scope': 'isolated_lab', 'alert': safe, 'human_approval_required': True, 'automatic_action_taken': False}
+    record = {'evidence_id': 'EV-' + uuid.uuid4().hex[:8].upper(), 'timestamp': now(), 'kind': 'wazuh_alert', 'authorization_scope': 'isolated_lab', 'alert': safe, 'human_approval_required': True, 'automatic_action_taken': False, 'review_status': 'pending'}
     EVIDENCE.mkdir(exist_ok=True)
     (EVIDENCE / (record['evidence_id'] + '.json')).write_text(json.dumps(record, indent=2), encoding='utf-8')
     return 200, record
@@ -170,6 +170,9 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json(200, {'evidence': records})
         if path == '/api/progress':
             return self.send_json(200, read_progress())
+        if path == '/api/overview':
+            records = [json.loads(p.read_text()) for p in sorted(EVIDENCE.glob('*.json')) if p.name != 'progress.json']
+            return self.send_json(200, {'lessons_total': len(load_lessons()), 'scenarios_total': len(load_json_dir(CONTENT/'scenarios')), 'evidence_total': len(records), 'pending_reviews': sum(1 for r in records if r.get('review_status') == 'pending')})
         if path.startswith('/api/'):
             return self.send_json(404, {'error':'not_found'})
         file_path = PUBLIC / ('index.html' if path == '/' else path.lstrip('/'))
@@ -191,6 +194,17 @@ class Handler(BaseHTTPRequestHandler):
                 if isinstance(values, list):
                     progress[key] = sorted(set(str(x) for x in values))
             return self.send_json(200, write_progress(progress))
+        match = re.fullmatch(r'/api/evidence/([^/]+)/review', path)
+        if match:
+            evidence_path = EVIDENCE / (match.group(1) + '.json')
+            if not evidence_path.exists():
+                return self.send_json(404, {'error': 'evidence_not_found'})
+            record = json.loads(evidence_path.read_text())
+            record['review_status'] = body.get('review_status', 'reviewed')
+            record['review_note'] = str(body.get('review_note', 'Reviewed by instructor or analyst'))[:500]
+            record['reviewed_at'] = now()
+            evidence_path.write_text(json.dumps(record, indent=2), encoding='utf-8')
+            return self.send_json(200, record)
         match = re.fullmatch(r'/api/scenarios/([^/]+)/run', path)
         if match:
             scenario, result = run_scenario(match.group(1), body)
