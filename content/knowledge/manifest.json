@@ -1,0 +1,10 @@
+{
+  "knowledge_base": "cyberquest-core",
+  "version": "1.0.0",
+  "authorization": "approved_training_content",
+  "documents": [
+    {"document_id":"KB-001","file":"core-notes.md","category":"defensive_security","source":"internal training notes with OWASP, NIST, and Wazuh references","difficulty":"beginner-to-technical","sensitivity":"public-training"},
+    {"document_id":"KB-002","file":"quantum-security.md","category":"research","source":"NIST post-quantum cryptography guidance and internal methodology","difficulty":"research","sensitivity":"public-training"}
+  ],
+  "evaluation_fields": ["retrieval_relevance", "citation_correctness", "source_coverage", "unsupported_claim_rate", "response_consistency", "latency"]
+}

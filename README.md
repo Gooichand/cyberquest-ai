@@ -52,6 +52,13 @@ The app remains usable without an LLM and keeps structured, evidence-grounded me
 - `POST /api/scenarios/{id}/run`
 - `POST /api/mentor`
 - `GET /api/evidence`
+- `GET /api/progress`
+- `POST /api/progress`
+- `POST /api/evidence/import`
+
+## Week 1 foundation complete
+
+Week 1 now includes the requirements specification, threat model, modular architecture, eight-module curriculum, three comic chapters, three scenario templates, RAG provenance manifest, structured agent contract, local progress storage, safe Wazuh evidence import, and an API contract. See `docs/REQUIREMENTS.md`, `docs/THREAT_MODEL.md`, `docs/ARCHITECTURE.md`, and `docs/API_CONTRACT.md`.
 
 ## MVP scenarios
 
