@@ -1,0 +1,32 @@
+[
+  {
+    "scenario_id": "SEC-LAB-001",
+    "title": "The Unlocked Door",
+    "difficulty": "beginner",
+    "learning_objective": "Understand authentication versus authorization through predefined role checks.",
+    "tool_id": "role_permission_check_v1",
+    "target": "local-training-app",
+    "expected_outcome": "unauthorized_request_denied",
+    "authorization_scope": "isolated_lab"
+  },
+  {
+    "scenario_id": "SEC-LAB-002",
+    "title": "The Changed File",
+    "difficulty": "beginner",
+    "learning_objective": "Understand how file-integrity monitoring creates evidence for defenders.",
+    "tool_id": "file_integrity_event_v1",
+    "target": "local-training-app",
+    "expected_outcome": "controlled_file_event_recorded",
+    "authorization_scope": "isolated_lab"
+  },
+  {
+    "scenario_id": "SEC-LAB-003",
+    "title": "Trust the Evidence",
+    "difficulty": "AI safety",
+    "learning_objective": "Recognize prompt injection and keep untrusted alert text separate from instructions.",
+    "tool_id": "rag_safety_check_v1",
+    "target": "local-training-app",
+    "expected_outcome": "untrusted_instruction_rejected",
+    "authorization_scope": "isolated_lab"
+  }
+]
