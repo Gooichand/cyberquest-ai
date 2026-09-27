@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import ipaddress, json, os, re, sqlite3, uuid
+import html, ipaddress, json, os, re, sqlite3, uuid
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -91,6 +91,20 @@ def report_markdown():
         lines += [f"### {item.get('evidence_id')} — {item.get('scenario', item.get('kind', 'record'))}", '', f"- Status: {item.get('review_status', 'pending')}", f"- Timestamp: {item.get('timestamp')}", '', '```json', json.dumps(item.get('result', item.get('alert', item)), indent=2), '```', '']
     lines += ['## Limitations', ''] + [f'- {value}' for value in report['limitations']]
     return '\n'.join(lines) + '\n'
+
+
+def comic_page(comic_id, scene_index):
+    comics = {item['id']: item for item in load_comics()}
+    comic = comics.get(comic_id)
+    if not comic:
+        return 404, '<h1>Comic chapter not found</h1><p><a href="/">Back to CyberQuest</a></p>'
+    scene_index = max(0, min(scene_index, len(comic['panels']) - 1))
+    panel = comic['panels'][scene_index]
+    previous = f'/comic/{html.escape(comic_id)}?scene={scene_index-1}' if scene_index else '/'
+    next_link = f'/comic/{html.escape(comic_id)}?scene={scene_index+1}' if scene_index < len(comic['panels']) - 1 else '/'
+    next_label = 'Next scene →' if scene_index < len(comic['panels']) - 1 else 'Return to CyberQuest'
+    page = f'''<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(comic['title'])} · CyberQuest AI</title><style>body{{margin:0;min-height:100vh;font-family:Segoe UI,Arial,sans-serif;color:#10243d;background:linear-gradient(145deg,#fff,#eaf7fd);display:grid;place-items:center;padding:24px}}main{{max-width:760px;width:100%;background:#fff;border:3px solid #10243d;border-radius:24px;box-shadow:10px 12px 0 #e94e70,0 25px 70px #6ca5bd55;padding:30px}}.eyebrow{{color:#d9364f;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}}h1{{margin:10px 0;font-size:clamp(32px,6vw,60px);letter-spacing:-.06em}}.topic{{display:inline-block;background:#e5f6fd;color:#087aa9;padding:7px 11px;border-radius:99px;font-weight:800;font-size:12px}}.bubble{{margin:28px 0 18px;background:#f7fcff;border:3px solid #10243d;border-radius:22px 22px 22px 5px;padding:22px;font-size:21px;font-weight:800;box-shadow:6px 7px 0 #73cdf1}}.narration{{font-size:17px;line-height:1.7;color:#5b7187}}.controls{{display:flex;justify-content:space-between;gap:12px;margin-top:28px}}a{{display:inline-block;text-decoration:none;padding:13px 17px;border-radius:12px;border:2px solid #10243d;font-weight:800}}a.primary{{color:#fff;background:linear-gradient(135deg,#149bd1,#73cdf1)}}a.secondary{{color:#087aa9;background:#fff}}small{{color:#5b7187}}</style></head><body><main><div class="eyebrow">CyberQuest comic reader</div><span class="topic">{html.escape(comic['topic'])}</span><h1>{html.escape(comic['title'])}</h1><small>Scene {scene_index+1} of {len(comic['panels'])}</small><div class="bubble">{html.escape(panel['dialogue'])}</div><p class="narration">{html.escape(panel['narration'])}</p><div class="controls"><a class="secondary" href="{previous}">← Previous</a><a class="primary" href="{next_link}">{next_label}</a></div></main></body></html>'''
+    return 200, page
 
 
 def evidence_record(scenario, result):
@@ -211,6 +225,12 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status); self.send_header('Content-Type', 'application/json'); self.send_header('Content-Length', str(len(data))); self.end_headers(); self.wfile.write(data)
     def do_GET(self):
         path = urlparse(self.path).path
+        comic_match = re.fullmatch(r'/comic/([^/]+)', path)
+        if comic_match:
+            try: scene = int(__import__('urllib.parse', fromlist=['parse_qs']).parse_qs(urlparse(self.path).query).get('scene', ['0'])[0])
+            except (TypeError, ValueError): scene = 0
+            status, page = comic_page(comic_match.group(1), scene)
+            data = page.encode(); self.send_response(status); self.send_header('Content-Type','text/html; charset=utf-8'); self.send_header('Content-Length',str(len(data))); self.end_headers(); self.wfile.write(data); return
         if path == '/api/health': return self.send_json(200, {'status':'ok','service':'cyberquest-ai','mode':'local-first'})
         if path == '/api/lessons': return self.send_json(200, {'lessons': load_lessons()})
         if path == '/api/comics': return self.send_json(200, {'comics': load_comics()})
