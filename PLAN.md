@@ -35,9 +35,9 @@
 ## Week 4–5 — Integration, persistence, and final packaging
 
 - [ ] Connect the existing Wazuh-to-RAG receiver in the authorized VirtualBox lab
-- [ ] Persist evidence and progress in a local database or exportable store
-- [ ] Add instructor review notes and report export
-- [ ] Add Windows packaging/startup instructions
+- [x] Persist evidence and progress in SQLite and exportable JSON/Markdown
+- [x] Add instructor review notes and report export
+- [x] Add Windows packaging/startup instructions
 - [ ] Run the complete live-lab test matrix
 - [ ] Capture screenshots and record the final video after Week 5
 - [ ] Assemble the final report and submission folder

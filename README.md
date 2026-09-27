@@ -55,6 +55,13 @@ The app remains usable without an LLM and keeps structured, evidence-grounded me
 - `GET /api/progress`
 - `POST /api/progress`
 - `POST /api/evidence/import`
+- `POST /api/wazuh/receiver`
+- `GET /api/report`
+- `GET /api/report?format=markdown`
+
+## Week 4 foundation
+
+Week 4 adds SQLite persistence in `evidence/cyberquest.db`, progress migration, evidence review notes, JSON and Markdown report export, a token-aware local Wazuh receiver bridge, and Windows launch scripts in `tools/`. The live Wazuh VM is still required to prove end-to-end network delivery.
 
 ## Week 1 foundation complete
 

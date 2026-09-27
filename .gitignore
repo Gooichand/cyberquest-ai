@@ -4,3 +4,5 @@ __pycache__/
 .env
 .DS_Store
 evidence/*.json
+evidence/*.db
+evidence/*.csv

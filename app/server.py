@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import ipaddress, json, os, re, uuid
+import ipaddress, json, os, re, sqlite3, uuid
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -10,11 +10,13 @@ PUBLIC = ROOT / 'app' / 'public'
 CONTENT = ROOT / 'content'
 EVIDENCE = ROOT / 'evidence'
 PROGRESS = EVIDENCE / 'progress.json'
+DB_PATH = EVIDENCE / 'cyberquest.db'
 ALLOWED_NET = ipaddress.ip_network('192.168.56.0/24')
 HOST = os.getenv('CYBERQUEST_HOST', '127.0.0.1')
 PORT = int(os.getenv('CYBERQUEST_PORT', '8080'))
 OLLAMA_URL = os.getenv('OLLAMA_URL', 'http://127.0.0.1:11434')
 OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.2:3b')
+WAZUH_RECEIVER_TOKEN = os.getenv('WAZUH_RECEIVER_TOKEN', '')
 
 
 def load_json_dir(folder):
@@ -52,22 +54,69 @@ def now():
     return datetime.now(timezone.utc).isoformat()
 
 
-def evidence_record(scenario, result):
+def db_connection():
     EVIDENCE.mkdir(exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute('CREATE TABLE IF NOT EXISTS evidence (evidence_id TEXT PRIMARY KEY, timestamp TEXT NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL, review_status TEXT NOT NULL, review_note TEXT, reviewed_at TEXT)')
+    conn.execute('CREATE TABLE IF NOT EXISTS app_state (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL)')
+    conn.commit()
+    return conn
+
+
+def save_evidence(record):
+    conn = db_connection()
+    conn.execute('INSERT OR REPLACE INTO evidence(evidence_id,timestamp,kind,payload,review_status,review_note,reviewed_at) VALUES(?,?,?,?,?,?,?)', (record['evidence_id'], record['timestamp'], record.get('kind', 'scenario'), json.dumps(record), record.get('review_status', 'pending'), record.get('review_note'), record.get('reviewed_at')))
+    conn.commit(); conn.close()
+    return record
+
+
+def list_evidence():
+    conn = db_connection()
+    rows = conn.execute('SELECT payload FROM evidence ORDER BY timestamp ASC').fetchall()
+    conn.close()
+    return [json.loads(row['payload']) for row in rows]
+
+
+def report_payload():
+    records = list_evidence()
+    progress = read_progress()
+    return {'generated_at': now(), 'project': 'CyberQuest AI', 'mode': 'local-first', 'progress': progress, 'evidence_count': len(records), 'pending_reviews': sum(1 for r in records if r.get('review_status') == 'pending'), 'evidence': records, 'limitations': ['Local educational platform; not a production security control.', 'Wazuh receiver still requires the authorized VirtualBox lab.', 'AI explanations are advisory and require human review.']}
+
+
+def report_markdown():
+    report = report_payload()
+    lines = ['# CyberQuest AI Evidence Report', '', f"Generated: {report['generated_at']}", '', f"Evidence records: {report['evidence_count']}", f"Pending reviews: {report['pending_reviews']}", '', '## Progress', '', json.dumps(report['progress'], indent=2), '', '## Evidence']
+    for item in report['evidence']:
+        lines += [f"### {item.get('evidence_id')} — {item.get('scenario', item.get('kind', 'record'))}", '', f"- Status: {item.get('review_status', 'pending')}", f"- Timestamp: {item.get('timestamp')}", '', '```json', json.dumps(item.get('result', item.get('alert', item)), indent=2), '```', '']
+    lines += ['## Limitations', ''] + [f'- {value}' for value in report['limitations']]
+    return '\n'.join(lines) + '\n'
+
+
+def evidence_record(scenario, result):
     record = {'evidence_id': 'EV-' + uuid.uuid4().hex[:8].upper(), 'timestamp': now(), 'scenario_id': scenario['scenario_id'], 'scenario': scenario['title'], 'result': result, 'authorization_scope': 'isolated_lab', 'review_status': 'pending'}
+    save_evidence(record)
     (EVIDENCE / (record['evidence_id'] + '.json')).write_text(json.dumps(record, indent=2), encoding='utf-8')
     return record
 
 
 def read_progress():
-    if not PROGRESS.exists():
-        return {'completed_lessons': [], 'completed_comics': [], 'completed_scenarios': [], 'updated_at': None}
-    return json.loads(PROGRESS.read_text(encoding='utf-8'))
+    conn = db_connection()
+    row = conn.execute('SELECT value FROM app_state WHERE key=?', ('progress',)).fetchone()
+    conn.close()
+    if row:
+        return json.loads(row['value'])
+    if PROGRESS.exists():
+        return json.loads(PROGRESS.read_text(encoding='utf-8'))
+    return {'completed_lessons': [], 'completed_comics': [], 'completed_scenarios': [], 'updated_at': None}
 
 
 def write_progress(value):
-    EVIDENCE.mkdir(exist_ok=True)
     value['updated_at'] = now()
+    conn = db_connection()
+    conn.execute('INSERT OR REPLACE INTO app_state(key,value,updated_at) VALUES(?,?,?)', ('progress', json.dumps(value), value['updated_at']))
+    conn.commit(); conn.close()
+    EVIDENCE.mkdir(exist_ok=True)
     PROGRESS.write_text(json.dumps(value, indent=2), encoding='utf-8')
     return value
 
@@ -101,6 +150,7 @@ def import_wazuh_alert(alert):
         'data': {k: (alert.get('data') or {}).get(k) for k in ('srcip', 'dstip', 'dstuser')}
     }
     record = {'evidence_id': 'EV-' + uuid.uuid4().hex[:8].upper(), 'timestamp': now(), 'kind': 'wazuh_alert', 'authorization_scope': 'isolated_lab', 'alert': safe, 'human_approval_required': True, 'automatic_action_taken': False, 'review_status': 'pending'}
+    save_evidence(record)
     EVIDENCE.mkdir(exist_ok=True)
     (EVIDENCE / (record['evidence_id'] + '.json')).write_text(json.dumps(record, indent=2), encoding='utf-8')
     return 200, record
@@ -166,13 +216,17 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/api/comics': return self.send_json(200, {'comics': load_comics()})
         if path == '/api/scenarios': return self.send_json(200, {'scenarios': load_json_dir(CONTENT/'scenarios')})
         if path == '/api/evidence':
-            records = [json.loads(p.read_text()) for p in sorted(EVIDENCE.glob('*.json')) if p.name != 'progress.json']
-            return self.send_json(200, {'evidence': records})
+            return self.send_json(200, {'evidence': list_evidence()})
         if path == '/api/progress':
             return self.send_json(200, read_progress())
         if path == '/api/overview':
-            records = [json.loads(p.read_text()) for p in sorted(EVIDENCE.glob('*.json')) if p.name != 'progress.json']
+            records = list_evidence()
             return self.send_json(200, {'lessons_total': len(load_lessons()), 'scenarios_total': len(load_json_dir(CONTENT/'scenarios')), 'evidence_total': len(records), 'pending_reviews': sum(1 for r in records if r.get('review_status') == 'pending')})
+        if path == '/api/report':
+            data = report_payload()
+            if urlparse(self.path).query == 'format=markdown':
+                encoded = report_markdown().encode(); self.send_response(200); self.send_header('Content-Type','text/markdown; charset=utf-8'); self.send_header('Content-Disposition','attachment; filename=cyberquest-evidence-report.md'); self.send_header('Content-Length',str(len(encoded))); self.end_headers(); self.wfile.write(encoded); return
+            return self.send_json(200, data)
         if path.startswith('/api/'):
             return self.send_json(404, {'error':'not_found'})
         file_path = PUBLIC / ('index.html' if path == '/' else path.lstrip('/'))
@@ -186,6 +240,15 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/api/mentor': return self.send_json(200, mentor_answer(body.get('question','')))
         if path == '/api/evidence/import':
             status, result = import_wazuh_alert(body)
+            return self.send_json(status, result)
+        if path == '/api/wazuh/receiver':
+            expected = WAZUH_RECEIVER_TOKEN
+            supplied = self.headers.get('X-CyberQuest-Token', '')
+            if expected and supplied != expected:
+                return self.send_json(403, {'error': 'receiver_token_required'})
+            alert = body.get('alert', body)
+            status, result = import_wazuh_alert(alert)
+            if isinstance(result, dict): result['receiver'] = 'cyberquest-local-bridge'
             return self.send_json(status, result)
         if path == '/api/progress':
             progress = read_progress()
@@ -203,6 +266,7 @@ class Handler(BaseHTTPRequestHandler):
             record['review_status'] = body.get('review_status', 'reviewed')
             record['review_note'] = str(body.get('review_note', 'Reviewed by instructor or analyst'))[:500]
             record['reviewed_at'] = now()
+            save_evidence(record)
             evidence_path.write_text(json.dumps(record, indent=2), encoding='utf-8')
             return self.send_json(200, record)
         match = re.fullmatch(r'/api/scenarios/([^/]+)/run', path)
