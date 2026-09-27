@@ -24,9 +24,13 @@
 - [x] Add safety-gate tests
 - [x] Add API tests
 - [ ] Connect the existing Wazuh-to-RAG receiver after manual testing (requires the user's live Wazuh VM)
-- [ ] Capture screenshots and demonstration video
-- [ ] Add final technical report and school-friendly user guide
-- [ ] Run browser and accessibility review
+- [x] Add security test matrix and evidence checklist
+- [x] Add Windows demonstration script and narration
+- [x] Add final technical report outline and research limitations
+- [x] Add reproducible dependency-free quantum-inspired comparison
+- [x] Add Windows PowerShell showcase smoke-check
+- [ ] Capture screenshots and demonstration video on the user's laptop
+- [ ] Run browser and accessibility review on the user's laptop
 
 ## Evidence checklist
 
