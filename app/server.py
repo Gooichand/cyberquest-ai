@@ -108,7 +108,7 @@ def read_progress():
         return json.loads(row['value'])
     if PROGRESS.exists():
         return json.loads(PROGRESS.read_text(encoding='utf-8'))
-    return {'completed_lessons': [], 'completed_comics': [], 'completed_scenarios': [], 'updated_at': None}
+    return {'completed_lessons': [], 'completed_comics': [], 'completed_scenarios': [], 'quiz_score': 0, 'last_lesson': None, 'updated_at': None}
 
 
 def write_progress(value):
@@ -256,6 +256,10 @@ class Handler(BaseHTTPRequestHandler):
                 values = body.get(key)
                 if isinstance(values, list):
                     progress[key] = sorted(set(str(x) for x in values))
+            if isinstance(body.get('quiz_score'), int):
+                progress['quiz_score'] = max(0, body['quiz_score'])
+            if body.get('last_lesson') is not None:
+                progress['last_lesson'] = str(body['last_lesson'])
             return self.send_json(200, write_progress(progress))
         match = re.fullmatch(r'/api/evidence/([^/]+)/review', path)
         if match:
