@@ -74,6 +74,8 @@ Week 5 adds a non-invasive authorized-lab readiness check, a submission manifest
 
 Week 6–7 adds `tools\wazuh_forwarder.py` for safe sanitized alert delivery, `tools\backup-cyberquest.py` for local source/evidence backups, and `docs\WEEK6_7.md` for the live-lab and final-submission procedure. These tools do not execute alert content, scan networks, or perform remediation.
 
+For one complete Weeks 1–7 audit and professional QA report, run `tools\all-weeks-audit.cmd`. The generated report counts functions, endpoint markers, interactive markers, lessons, comics, scenarios, and every automated check while leaving live Wazuh status explicitly pending until the authorized VM test.
+
 ## Week 1 foundation complete
 
 Week 1 now includes the requirements specification, threat model, modular architecture, eight-module curriculum, three comic chapters, three scenario templates, RAG provenance manifest, structured agent contract, local progress storage, safe Wazuh evidence import, and an API contract. See `docs/REQUIREMENTS.md`, `docs/THREAT_MODEL.md`, `docs/ARCHITECTURE.md`, and `docs/API_CONTRACT.md`.

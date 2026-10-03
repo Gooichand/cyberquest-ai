@@ -1,6 +1,12 @@
 @echo off
 setlocal
 cd /d "%~dp0.."
+py tools\all-weeks-audit.py
+if errorlevel 1 (
+  echo Weeks 1-7 audit failed. Fix the reported issue before exporting.
+  pause
+  exit /b 1
+)
 if not exist submission mkdir submission
 if not exist submission\docs mkdir submission\docs
 copy /Y README.md submission\README.md >nul

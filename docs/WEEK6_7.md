@@ -79,6 +79,23 @@ Use exactly one label in the final report:
 - `READY FOR SUBMISSION` — final report, screenshots, video, and evidence package are complete.
 - `NEEDS FIXES` — any required check failed.
 
+## Complete Weeks 1–7 audit
+
+Run the all-weeks audit from Windows:
+
+```cmd
+tools\all-weeks-audit.cmd
+```
+
+It tests the local APIs, three comic server routes, safe scenario validation, out-of-scope rejection, mentor grounding, receiver token protection, lab readiness, report generation, forwarder presence, and backup presence. It also counts backend functions, tool functions, frontend functions, endpoint markers, interactive markers, lessons, comics, and scenarios.
+
+Outputs:
+
+```text
+submission\WEEKS_1_7_FINAL_QA_REPORT.md
+submission\WEEKS_1_7_AUDIT.json
+```
+
 ## Required honesty rule
 
 The final report must distinguish:
