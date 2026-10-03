@@ -58,10 +58,17 @@ The app remains usable without an LLM and keeps structured, evidence-grounded me
 - `POST /api/wazuh/receiver`
 - `GET /api/report`
 - `GET /api/report?format=markdown`
+- `GET /api/lab/readiness`
+- `POST /api/lab/check`
+- `GET /api/submission/manifest`
 
 ## Week 4 foundation
 
 Week 4 adds SQLite persistence in `evidence/cyberquest.db`, progress migration, evidence review notes, JSON and Markdown report export, a token-aware local Wazuh receiver bridge, and Windows launch scripts in `tools/`. The live Wazuh VM is still required to prove end-to-end network delivery.
+
+## Week 5 finalization
+
+Week 5 adds a non-invasive authorized-lab readiness check, a submission manifest, and reproducible Windows final-check/export tools. Run `tools\week5-final-check.cmd` for the local gate, then use `tools\export-submission.cmd` after the live lab evidence is captured. The application never probes or attacks the VMs automatically.
 
 ## Week 1 foundation complete
 

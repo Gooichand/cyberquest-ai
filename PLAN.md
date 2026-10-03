@@ -42,6 +42,16 @@
 - [ ] Capture screenshots and record the final video after Week 5
 - [ ] Assemble the final report and submission folder
 
+## Week 5 — Production-readiness code complete
+
+- [x] Add non-invasive authorized-lab readiness API
+- [x] Add submission manifest API
+- [x] Add reproducible local final-check runner
+- [x] Add Windows final-check and submission-export scripts
+- [x] Document live-lab evidence requirements and limitations
+- [ ] Perform live Wazuh VM validation
+- [ ] Capture final screenshots and demonstration video
+
 ## Evidence checklist
 
 - Application health response

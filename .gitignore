@@ -6,3 +6,4 @@ __pycache__/
 evidence/*.json
 evidence/*.db
 evidence/*.csv
+submission/

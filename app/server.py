@@ -93,6 +93,22 @@ def report_markdown():
     return '\n'.join(lines) + '\n'
 
 
+def lab_readiness(observations=None):
+    expected = {'wazuh_server': '192.168.56.101', 'kali': '192.168.56.10', 'ubuntu_agent': '192.168.56.103'}
+    checks = []
+    for name, address in expected.items():
+        valid = ipaddress.ip_address(address) in ALLOWED_NET
+        observed = (observations or {}).get(name)
+        checks.append({'check': name + '_address', 'expected': address, 'observed': observed or 'not_observed', 'status': 'pass' if valid and (observed in (None, address)) else 'fail'})
+    checks += [{'check': 'private_lab_network', 'expected': str(ALLOWED_NET), 'observed': 'allowlisted only', 'status': 'pass'}, {'check': 'live_wazuh_connectivity', 'expected': 'verified by user VM test', 'observed': 'not tested by local app', 'status': 'pending'}, {'check': 'automatic_remediation', 'expected': 'disabled', 'observed': 'disabled', 'status': 'pass'}]
+    return {'generated_at': now(), 'scope': 'authorized_virtualbox_lab_only', 'checks': checks, 'ready_for_live_test': all(item['status'] == 'pass' for item in checks if item['status'] != 'pending'), 'limitations': ['This endpoint validates configuration and scope; it does not scan or probe the VMs.', 'Live Wazuh delivery must be demonstrated from the authorized lab.']}
+
+
+def submission_manifest():
+    files = ['README.md', 'PLAN.md', 'docs/FINAL_REPORT.md', 'docs/DEMO_SCRIPT.md', 'docs/SECURITY_TEST_MATRIX.md', 'docs/WEEK4.md', 'docs/WEEK5.md', 'app/server.py', 'app/public/index.html', 'app/public/app.js', 'app/public/styles.css', 'sample-wazuh-alert.json', 'research/quantum_comparison.py']
+    return {'generated_at': now(), 'project': 'CyberQuest AI', 'status': 'ready_for_week5_evidence_capture', 'files': [{'path': item, 'exists': (ROOT / item).exists()} for item in files], 'live_evidence': {'wazuh_vm_alert': 'pending_user_lab_capture', 'screenshots': 'pending_after_week5', 'demonstration_video': 'pending_after_week5'}}
+
+
 def comic_page(comic_id, scene_index):
     comics = {item['id']: item for item in load_comics()}
     comic = comics.get(comic_id)
@@ -242,6 +258,10 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/api/overview':
             records = list_evidence()
             return self.send_json(200, {'lessons_total': len(load_lessons()), 'scenarios_total': len(load_json_dir(CONTENT/'scenarios')), 'evidence_total': len(records), 'pending_reviews': sum(1 for r in records if r.get('review_status') == 'pending')})
+        if path == '/api/lab/readiness':
+            return self.send_json(200, lab_readiness())
+        if path == '/api/submission/manifest':
+            return self.send_json(200, submission_manifest())
         if path == '/api/report':
             data = report_payload()
             if urlparse(self.path).query == 'format=markdown':
@@ -270,6 +290,8 @@ class Handler(BaseHTTPRequestHandler):
             status, result = import_wazuh_alert(alert)
             if isinstance(result, dict): result['receiver'] = 'cyberquest-local-bridge'
             return self.send_json(status, result)
+        if path == '/api/lab/check':
+            return self.send_json(200, lab_readiness(body.get('observations') if isinstance(body.get('observations'), dict) else None))
         if path == '/api/progress':
             progress = read_progress()
             for key in ('completed_lessons', 'completed_comics', 'completed_scenarios'):
