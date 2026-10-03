@@ -52,6 +52,18 @@
 - [ ] Perform live Wazuh VM validation
 - [ ] Capture final screenshots and demonstration video
 
+## Week 6–7 — Operational validation and final submission
+
+- [x] Add safe Wazuh alert forwarder with private-network validation
+- [x] Add dependency-free project and evidence backup utility
+- [x] Add live-lab runbook and final decision criteria
+- [ ] Validate Wazuh Server, Ubuntu agent, and Kali from the authorized VirtualBox lab
+- [ ] Prove one live sanitized alert reaches CyberQuest
+- [ ] Verify evidence persistence after restart
+- [ ] Create final backup and submission archive
+- [ ] Capture screenshots and final demonstration video
+- [ ] Complete final report review and submission
+
 ## Evidence checklist
 
 - Application health response

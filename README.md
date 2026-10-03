@@ -70,6 +70,10 @@ Week 4 adds SQLite persistence in `evidence/cyberquest.db`, progress migration, 
 
 Week 5 adds a non-invasive authorized-lab readiness check, a submission manifest, and reproducible Windows final-check/export tools. Run `tools\week5-final-check.cmd` for the local gate, then use `tools\export-submission.cmd` after the live lab evidence is captured. The application never probes or attacks the VMs automatically.
 
+## Week 6–7 operational layer
+
+Week 6–7 adds `tools\wazuh_forwarder.py` for safe sanitized alert delivery, `tools\backup-cyberquest.py` for local source/evidence backups, and `docs\WEEK6_7.md` for the live-lab and final-submission procedure. These tools do not execute alert content, scan networks, or perform remediation.
+
 ## Week 1 foundation complete
 
 Week 1 now includes the requirements specification, threat model, modular architecture, eight-module curriculum, three comic chapters, three scenario templates, RAG provenance manifest, structured agent contract, local progress storage, safe Wazuh evidence import, and an API contract. See `docs/REQUIREMENTS.md`, `docs/THREAT_MODEL.md`, `docs/ARCHITECTURE.md`, and `docs/API_CONTRACT.md`.

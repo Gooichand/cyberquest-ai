@@ -105,7 +105,7 @@ def lab_readiness(observations=None):
 
 
 def submission_manifest():
-    files = ['README.md', 'PLAN.md', 'docs/FINAL_REPORT.md', 'docs/DEMO_SCRIPT.md', 'docs/SECURITY_TEST_MATRIX.md', 'docs/WEEK4.md', 'docs/WEEK5.md', 'app/server.py', 'app/public/index.html', 'app/public/app.js', 'app/public/styles.css', 'sample-wazuh-alert.json', 'research/quantum_comparison.py']
+    files = ['README.md', 'PLAN.md', 'docs/FINAL_REPORT.md', 'docs/DEMO_SCRIPT.md', 'docs/SECURITY_TEST_MATRIX.md', 'docs/WEEK4.md', 'docs/WEEK5.md', 'docs/WEEK6_7.md', 'app/server.py', 'app/public/index.html', 'app/public/app.js', 'app/public/styles.css', 'sample-wazuh-alert.json', 'research/quantum_comparison.py', 'tools/wazuh_forwarder.py', 'tools/backup-cyberquest.py']
     return {'generated_at': now(), 'project': 'CyberQuest AI', 'status': 'ready_for_week5_evidence_capture', 'files': [{'path': item, 'exists': (ROOT / item).exists()} for item in files], 'live_evidence': {'wazuh_vm_alert': 'pending_user_lab_capture', 'screenshots': 'pending_after_week5', 'demonstration_video': 'pending_after_week5'}}
 
 
