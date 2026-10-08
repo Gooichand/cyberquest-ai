@@ -101,3 +101,30 @@ Week 1 now includes the requirements specification, threat model, modular archit
 - **Week 1:** content, scenarios, RAG-ready knowledge base, API foundation.
 - **Week 2:** polished student/company UI, scenario execution, evidence and mentor flow.
 - **Week 3:** tests, Wazuh evidence adapter, safety evaluation, screenshots, report, and showcase video.
+
+## Public WebDev application
+
+The repository now also contains the finalized React/WebDev application in `client/`, with its full-stack authentication and database server in `server/` and `drizzle/`.
+
+### Public app features
+
+- 30 structured learning chapters
+- 50 comic chapters with 10 scenes each
+- 20 deterministic, private-lab safe validations
+- One secure OAuth entry point with server-side Student, Company, and Admin role routing
+- Protected admin console
+- Evidence review and Markdown report export
+- Read-only safety model: no exploit execution, autonomous remediation, file deletion, or IP blocking
+- Red, white, and sky-blue 3D comic visual system
+
+### Run the WebDev application
+
+```bash
+pnpm install
+pnpm run check
+pnpm test -- --run
+pnpm run build
+pnpm run dev
+```
+
+The original local-first Python/FastAPI application remains available through `app/server.py` and the existing Windows tools under `tools/`.

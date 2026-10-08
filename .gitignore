@@ -7,3 +7,19 @@ evidence/*.json
 evidence/*.db
 evidence/*.csv
 submission/
+
+# React/WebDev dependencies and build outputs
+node_modules/
+.pnpm-store/
+dist/
+build/
+coverage/
+.vite/
+*.tsbuildinfo
+*.log
+
+# WebDev/local deployment metadata
+.manus-logs/
+.webdev/
+.project-config.json
+client/public/__manus__/version.json

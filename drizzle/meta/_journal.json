@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1791190305413,
+      "tag": "0000_tense_squadron_sinister",
+      "breakpoints": true
+    }
+  ]
+}
