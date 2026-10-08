@@ -1,0 +1,59 @@
+name: CyberQuest quality and security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  web-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm run check
+
+      - name: Unit tests
+        run: pnpm test -- --run
+
+      - name: Production build
+        run: pnpm run build
+
+      - name: High-severity dependency audit
+        run: pnpm audit --audit-level high
+
+  secret-pattern-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reject common committed secret patterns
+        shell: bash
+        run: |
+          if git grep -n -I -E '(AKIA[0-9A-Z]{16}|BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|ghp_[A-Za-z0-9]{30,}|sk-[A-Za-z0-9]{20,})' -- ':!pnpm-lock.yaml'; then
+            echo 'Potential secret pattern found in tracked source.'
+            exit 1
+          fi

@@ -1,7 +1,7 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -15,6 +15,22 @@ export const appRouter = router({
         success: true,
       } as const;
     }),
+  }),
+
+  workspace: router({
+    session: protectedProcedure.query(({ ctx }) => ({
+      userId: ctx.user.id,
+      role: ctx.user.role,
+      email: ctx.user.email,
+    })),
+  }),
+
+  admin: router({
+    policy: adminProcedure.query(({ ctx }) => ({
+      role: ctx.user.role,
+      safety: "human_approval_required",
+      automaticActionTaken: false,
+    })),
   }),
 
   // TODO: add feature routers here, e.g.
