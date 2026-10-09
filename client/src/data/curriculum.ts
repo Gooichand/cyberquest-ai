@@ -23,6 +23,15 @@ import {
 export type ToneName = "coral" | "blue" | "sky" | "mint" | "violet";
 export type LessonLevel = "Foundation" | "Core" | "Applied" | "Advanced";
 
+export type LessonScreen = {
+  index: number;
+  kind: "story" | "diagram" | "callout" | "checkpoint" | "example" | "recap";
+  title: string;
+  copy: string;
+};
+
+export type QuizMode = "single" | "multi" | "match" | "fill" | "true-false" | "sequence" | "scenario" | "step";
+
 export type Lesson = {
   id: string;
   title: string;
@@ -34,9 +43,11 @@ export type Lesson = {
   quiz: string;
   answer: string;
   options: string[];
+  screens: LessonScreen[];
+  quizMode: QuizMode;
 };
 
-export type ComicScene = { who: string; line: string; body: string };
+export type ComicScene = { who: string; line: string; body: string; layout: "wide" | "split" | "close" | "caption" | "splash" };
 export type Comic = {
   id: string;
   title: string;
@@ -56,9 +67,12 @@ export type SafeLab = {
   description: string;
   result: string;
   icon: LucideIcon;
+  objectives: string[];
+  hints: string[];
+  validationPrompt: string;
 };
 
-const lessonSeeds: Array<Omit<Lesson, "id" | "icon" | "color" | "options"> & { distractors: [string, string] }> = [
+const lessonSeeds: Array<Omit<Lesson, "id" | "icon" | "color" | "options" | "screens" | "quizMode"> & { distractors: [string, string] }> = [
   { title: "Security mindset", level: "Foundation", simple: "Security starts with careful questions, not dramatic tools.", technical: "Trust boundaries, assets, actors, assumptions, and the difference between a signal and a conclusion.", quiz: "What should a defender do before choosing a response?", answer: "Understand the asset and evidence", distractors: ["Guess the attacker", "Delete the alert"] },
   { title: "The CIA triad", level: "Foundation", simple: "Confidentiality, integrity, and availability describe what protection must preserve.", technical: "Map controls and events to confidentiality, integrity, availability, and business impact.", quiz: "Which property means data remains accurate and unchanged?", answer: "Integrity", distractors: ["Availability", "Anonymity"] },
   { title: "Asset inventory", level: "Foundation", simple: "You cannot defend what you cannot name, locate, and assign an owner to.", technical: "Asset identity, ownership, lifecycle, criticality, software inventory, and drift detection.", quiz: "What makes an inventory useful during triage?", answer: "Owner, location, and criticality", distractors: ["Only a hostname", "A random label"] },
@@ -94,12 +108,26 @@ const lessonSeeds: Array<Omit<Lesson, "id" | "icon" | "color" | "options"> & { d
 const lessonIcons: LucideIcon[] = [Shield, ShieldCheck, ScanLine, Waypoints, Radar, Network, LockKeyhole, KeyRound, Users, ClipboardCheck, Sparkles, CheckCircle2, Network, ScanLine, Waypoints, FileText, Activity, FileCheck2, TerminalSquare, Radar, Activity, ClipboardCheck, FileCheck2, Users, Bot, ShieldCheck, CheckCircle2, Radar, Zap, Waypoints];
 const lessonColors: ToneName[] = ["coral", "blue", "sky", "mint", "violet"];
 
+const screenKinds: LessonScreen["kind"][] = ["story", "diagram", "callout", "example", "checkpoint", "story", "diagram", "callout", "example", "checkpoint", "story", "diagram", "callout", "example", "checkpoint", "story", "diagram", "callout", "example", "recap"];
+const screenTitles = ["The field situation", "Signal map", "Key idea", "Worked example", "Mini checkpoint", "What changes in practice", "Boundary diagram", "Analyst note", "Scenario replay", "Pause and predict", "Common mistake", "Evidence chain", "Decision rule", "Team handoff", "Apply the idea", "Defender perspective", "Control map", "Uncertainty marker", "Next-step simulation", "Chapter recap"];
+const quizModes: QuizMode[] = ["single", "true-false", "scenario", "step", "multi", "fill", "match", "sequence"];
 export const lessons: Lesson[] = lessonSeeds.map((seed, index) => ({
   ...seed,
   id: `L${String(index + 1).padStart(2, "0")}`,
   icon: lessonIcons[index % lessonIcons.length],
   color: lessonColors[index % lessonColors.length],
   options: [seed.answer, ...seed.distractors],
+  quizMode: quizModes[index % quizModes.length],
+  screens: screenKinds.map((kind, screenIndex) => ({
+    index: screenIndex,
+    kind,
+    title: screenTitles[screenIndex],
+    copy: screenIndex === 0
+      ? seed.simple
+      : screenIndex === 19
+        ? `Recap: ${seed.technical} The safe habit is to preserve evidence, state uncertainty, and ask for human review.`
+        : `${seed.title} in practice: ${seed.technical} Connect the idea to an authorized training situation, never an uncontrolled target.`,
+  })),
 }));
 
 const comicSeeds: Array<[string, string, ToneName, string, string]> = [
@@ -155,17 +183,22 @@ const comicSeeds: Array<[string, string, ToneName, string, string]> = [
   ["The Last Lesson", "Continuous improvement", "violet", "The team rewrites the playbook", "Every exercise should improve the next one."],
 ];
 
-const sceneBeats: Array<[string, string]> = [
-  ["Signal", "The team names exactly what was observed before interpreting it."],
-  ["Scope", "Shield confirms the event belongs to the private training boundary."],
-  ["Baseline", "Byte checks the expected state, owner, and approved change window."],
-  ["Evidence", "Nova preserves the timestamp, source, and relevant fields."],
-  ["Question", "The team writes the smallest question that the evidence can answer."],
-  ["Challenge", "A tempting conclusion is tested against a second source."],
-  ["Guardrail", "The assistant rejects instruction-shaped content and unsafe shortcuts."],
-  ["Context", "Approved local notes add meaning without becoming authority."],
-  ["Review", "A human reviewer checks impact, uncertainty, and reversibility."],
-  ["Lesson", "The decision is recorded so the next analyst can learn from it."],
+const sceneBeats: Array<[string, string, ComicScene["layout"]]> = [
+  ["Signal", "The team names exactly what was observed before interpreting it.", "splash"],
+  ["Scope", "Shield confirms the event belongs to the private training boundary.", "wide"],
+  ["Baseline", "Byte checks the expected state, owner, and approved change window.", "split"],
+  ["Evidence", "Nova preserves the timestamp, source, and relevant fields.", "close"],
+  ["Question", "The team writes the smallest question that the evidence can answer.", "caption"],
+  ["Challenge", "A tempting conclusion is tested against a second source.", "split"],
+  ["Guardrail", "The assistant rejects instruction-shaped content and unsafe shortcuts.", "close"],
+  ["Context", "Approved local notes add meaning without becoming authority.", "wide"],
+  ["Review", "A human reviewer checks impact, uncertainty, and reversibility.", "caption"],
+  ["Decision", "The team separates a recommendation from an approved action.", "splash"],
+  ["Handoff", "The next analyst receives the original alert and the sanitized copy.", "split"],
+  ["Recheck", "A second validation confirms the result without touching the endpoint.", "close"],
+  ["Record", "The evidence timeline captures who reviewed what and when.", "caption"],
+  ["Lesson", "The decision is recorded so the next analyst can learn from it.", "wide"],
+  ["Next chapter", "The team leaves the lab safer, wiser, and ready for the next question.", "splash"],
 ];
 
 export const comics: Comic[] = comicSeeds.map(([title, topic, accent, hook, lesson], index) => ({
@@ -175,14 +208,15 @@ export const comics: Comic[] = comicSeeds.map(([title, topic, accent, hook, less
   accent,
   hook,
   lesson,
-  panels: sceneBeats.map(([beat, body], sceneIndex) => ({
+  panels: sceneBeats.map(([beat, body, layout], sceneIndex) => ({
     who: sceneIndex % 3 === 0 ? "Byte" : sceneIndex % 3 === 1 ? "Shield" : "Nova",
     line: `${beat}: ${sceneIndex === 0 ? hook : `${title} asks the team to ${beat.toLowerCase()}.`}`,
     body: `${body} ${lesson}`,
+    layout,
   })),
 }));
 
-export const scenarios: SafeLab[] = [
+const scenariosSeed: Array<Omit<SafeLab, "objectives" | "hints" | "validationPrompt">> = [
   { id: "SEC-LAB-001", title: "Role boundary check", tag: "Access control", tool: "role_permission_check_v1", difficulty: "Guided", description: "Verify that a student role cannot request an admin-only dashboard capability.", result: "Student requesting admin:dashboard is denied as expected.", icon: LockKeyhole },
   { id: "SEC-LAB-002", title: "Controlled file event", tag: "File integrity", tool: "controlled_file_event_v1", difficulty: "Guided", description: "Create a synthetic file event and record its path, timestamp, and expected change window.", result: "Synthetic /opt/wazuh-test/test.txt event is recorded as evidence.", icon: FileCheck2 },
   { id: "SEC-LAB-003", title: "Prompt injection gate", tag: "AI safety", tool: "untrusted_alert_text_v1", difficulty: "Guided", description: "Pass instruction-shaped alert text through the analysis boundary and verify it remains data.", result: "Instruction-shaped alert content is rejected as untrusted data.", icon: Bot },
@@ -204,3 +238,18 @@ export const scenarios: SafeLab[] = [
   { id: "SEC-LAB-019", title: "Snapshot evidence review", tag: "Resilience", tool: "snapshot_manifest_v1", difficulty: "Tactical", description: "Compare a training snapshot manifest with its expected lab inventory.", result: "Drift is reported for review and the snapshot remains untouched.", icon: CheckCircle2 },
   { id: "SEC-LAB-020", title: "Quantum inventory seed", tag: "Quantum-safe", tool: "crypto_inventory_v1", difficulty: "Expert", description: "Record algorithms, certificate lifetimes, and migration priority from synthetic assets.", result: "Long-lived cryptography is prioritized for staged post-quantum planning.", icon: Zap },
 ];
+
+export const scenarios: SafeLab[] = scenariosSeed.map((scenario) => ({
+  ...scenario,
+  objectives: [
+    "Read the scope and identify the evidence boundary.",
+    `Complete the ${scenario.tag.toLowerCase()} observation using the approved fixture.`,
+    "Record the result and explain what remains uncertain.",
+  ],
+  hints: [
+    "Start with the authorized scope banner; never widen the target.",
+    "Look for the tool output that proves the expected state.",
+    "A safe validation can pass when the correct result is a denial.",
+  ],
+  validationPrompt: `${scenario.title}: complete each objective, then submit the read-only validation.`,
+}));
